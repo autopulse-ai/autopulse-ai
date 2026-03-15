@@ -1,0 +1,34 @@
+:root {
+  color-scheme: dark;
+  --bg: #06111f;
+  --bg-soft: rgba(8, 20, 36, 0.92);
+  --surface: rgba(10, 24, 42, 0.8);
+  --surface-strong: rgba(13, 31, 54, 0.95);
+  --line: rgba(163, 194, 223, 0.12);
+  --text: #eef4fb;
+  --muted: rgba(222, 232, 244, 0.72);
+  --accent: #2ebcff;
+  --accent-deep: #2182f2;
+  --accent-warm: #ffab52;
+  --accent-soft: #9fd3ff;
+  --positive: #74d6ff;
+  --caution: #ffbd72;
+  --shadow: 0 30px 80px rgba(0, 0, 0, 0.32);
+  --background-top-left: rgba(46, 188, 255, 0.19);
+  --background-top-right: rgba(255, 171, 82, 0.12);
+  --background-shell-start: #04111f;
+  --background-shell-mid: #081827;
+  --background-shell-end: #02070d;
+  --status-border: rgba(159, 211, 255, 0.24);
+  --status-bg: rgba(46, 188, 255, 0.08);
+  --status-text: #d2e8ff;
+  --chart-line-actual: #25c7ff;
+  --chart-line-forecast: #ffab52;
+  --chart-line-third: #86b7ff;
+  --chart-fill-actual-strong: rgba(37, 199, 255, 0.5);
+  --chart-fill-actual-soft: rgba(37, 199, 255, 0.03);
+  --chart-band-95: rgba(255, 171, 82, 0.08);
+  --chart-band-80: rgba(255, 171, 82, 0.14);
+  --selection-chip-border: rgba(46, 188, 255, 0.24);
+  --selection-chip-bg: rgba(46, 188, 255, 0.08);
+}

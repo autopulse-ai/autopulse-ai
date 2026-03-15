@@ -1,26 +1,34 @@
-# AutoPulse-AI 🚗📈
+# AutoPulse AI
 
-AutoPulse-AI is a self-serve automotive forecasting platform focused on the German market.
+Next.js MVP for the AutoPulse automotive forecasting portal.
 
-We transform official vehicle registration data and automotive news into:
-- Short-term market forecasts (3, 6, 12 months)
-- Clear, decision-ready visualizations
-- Downloadable datasets
-- Forecast APIs
-- Scenario intelligence (optimistic / neutral / pessimistic)
+## What is included
 
-## Who is this for?
-- Automotive SMEs
-- Consultants & analysts
-- Data scientists
-- Mobility startups
+- TypeScript Next.js app using the App Router
+- server-side connection to the Supabase Postgres database
+- live historical registration visualizations based on the current `core` schema
+- placeholder forecast visuals until `ml.fact_forecasts` is populated
+- landing page, explore dashboard, series detail page, and roadmap page
 
-## Philosophy
-AutoPulse-AI is product-first:
-- Charts over reports
-- Signals over opinions
-- APIs over PDFs
+## Environment
 
-## Status
-🚧 Early-stage development  
-📬 Landing page and newsletter coming soon
+The app expects the existing Supabase variables in `.env`.
+
+For database access it now prefers:
+
+- `SUPABASE_SESSION_POOLER`
+- fallback: `SUPABAE_SESSION_POOLER` (legacy typo still supported)
+- fallback: `SUPABASE_DIRECT_CONNECT_URL`
+
+## Run
+
+```bash
+npm install
+npm run dev
+```
+
+## Notes
+
+- Historical data is read from `core.fact_registrations` and related dimensions.
+- Forecast values are currently synthetic placeholders and clearly labeled in the UI.
+- The business-plan-driven feature roadmap lives in [`docs/mvp-feature-plan.md`](docs/mvp-feature-plan.md).
