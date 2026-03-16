@@ -292,7 +292,7 @@ export function ExploreDashboard({ initialData }: { initialData: ExploreInitialD
       </section>
 
       <section className="content-section">
-        <article className="panel">
+        <article className="panel dataframe-panel">
           <div className="panel-header">
             <div>
               <p className="eyebrow">Current selection</p>

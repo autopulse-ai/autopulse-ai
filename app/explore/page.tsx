@@ -2,7 +2,7 @@ import { ExploreDashboard } from "@/components/explore-dashboard";
 import { SectionHeading } from "@/components/ui";
 import { getExploreInitialData } from "@/lib/data";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export default async function ExplorePage() {
   const initialData = await getExploreInitialData();

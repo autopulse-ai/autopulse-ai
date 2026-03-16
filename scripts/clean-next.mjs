@@ -1,8 +1,10 @@
 import { existsSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 
-const nextDir = resolve(".next");
+const nextDirs = [resolve(".next"), resolve(".next-dev")];
 
-if (existsSync(nextDir)) {
-  rmSync(nextDir, { recursive: true, force: true });
+for (const nextDir of nextDirs) {
+  if (existsSync(nextDir)) {
+    rmSync(nextDir, { recursive: true, force: true });
+  }
 }

@@ -88,10 +88,14 @@ export function ChartJsLineChart({
         data: rawDates.map((date) => pointsByDate.get(date) ?? null),
         borderColor: color.border,
         backgroundColor: color.background,
-        borderWidth: 3,
-        tension: 0.28,
-        pointRadius: 0,
-        pointHoverRadius: 4,
+        borderWidth: 2.25,
+        tension: 0,
+        pointRadius: 4,
+        pointHoverRadius: 5,
+        pointHitRadius: 10,
+        pointBorderWidth: 2,
+        pointBackgroundColor: color.border,
+        pointBorderColor: color.border,
         spanGaps: true
       };
     });

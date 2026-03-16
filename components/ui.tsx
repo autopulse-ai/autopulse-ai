@@ -18,9 +18,14 @@ export function HeroMetricGrid({ items }: { items: Metric[] }) {
     <div className="metric-grid">
       {items.map((item) => (
         <article className="metric-card" key={item.label}>
-          <p className="eyebrow">{item.label}</p>
-          <h3>{item.value}</h3>
-          {item.change ? <p className={toneClass(item.tone)}>{item.change}</p> : null}
+          <p className="metric-label">{item.label}</p>
+          <h3 className="metric-value">{item.value}</h3>
+          {item.change ? (
+            <p className={toneClass(item.tone)}>
+              {item.tone === "positive" ? "↑ " : item.tone === "caution" ? "↓ " : ""}
+              {item.change}
+            </p>
+          ) : null}
         </article>
       ))}
     </div>
@@ -89,7 +94,7 @@ export function RankedList({
 
 export function SpotlightTable({ items }: { items: SeriesSummary[] }) {
   return (
-    <article className="panel">
+    <article className="panel spotlight-panel">
       <div className="panel-header">
         <div>
           <p className="eyebrow">Series spotlight</p>
@@ -167,6 +172,70 @@ export function PillarGrid() {
           <p className="eyebrow">Platform pillar</p>
           <h3>{pillar.title}</h3>
           <p>{pillar.copy}</p>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+export function MarketTicker({
+  items
+}: {
+  items: Array<{
+    label: string;
+    value: number;
+    change: number;
+  }>;
+}) {
+  const loop = [...items, ...items];
+
+  return (
+    <div className="market-ticker panel">
+      <div className="market-ticker-track">
+        {loop.map((item, index) => (
+          <div className="ticker-item" key={`${item.label}-${index}`}>
+            <span className="ticker-label">{item.label}</span>
+            <strong>{new Intl.NumberFormat("en-US").format(item.value)}</strong>
+            <b className={item.change >= 0 ? "positive" : "caution"}>
+              {item.change >= 0 ? "+" : ""}
+              {item.change.toFixed(1)}%
+            </b>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function CapabilitiesGrid() {
+  const capabilities = [
+    {
+      title: "Market Monitoring",
+      copy: "Track vehicle registrations across OEMs and models with a live market-wide view.",
+      glyph: "M"
+    },
+    {
+      title: "AI Forecasts",
+      copy: "Prepare the interface for 3-, 6-, and 12-month forecast workflows and confidence bands.",
+      glyph: "AI"
+    },
+    {
+      title: "Model-Level Insights",
+      copy: "Dive into thousands of model series and compare them with product-grade charting.",
+      glyph: "Δ"
+    }
+  ];
+
+  return (
+    <div className="capabilities-grid">
+      {capabilities.map((capability) => (
+        <article className="panel capability-card" key={capability.title}>
+          <div className="capability-glyph" aria-hidden="true">
+            {capability.glyph}
+          </div>
+          <p className="eyebrow">Platform capability</p>
+          <h3>{capability.title}</h3>
+          <p>{capability.copy}</p>
         </article>
       ))}
     </div>

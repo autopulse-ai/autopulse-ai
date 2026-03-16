@@ -1,31 +1,45 @@
 import Link from "next/link";
 import { TrendChart } from "@/components/charts";
 import {
+  CapabilitiesGrid,
   HeroMetricGrid,
+  MarketTicker,
   PillarGrid,
   RankedList,
   SectionHeading,
   SpotlightTable
 } from "@/components/ui";
-import { getMarketSnapshot, getRoadmapPhases, getSeriesDetail } from "@/lib/data";
+import { getHomePageData, getRoadmapPhases } from "@/lib/data";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export default async function HomePage() {
-  const snapshot = await getMarketSnapshot();
-  const featuredSeriesKey = snapshot.seriesSpotlight[0]?.tsKey ?? "BMW_X1_Total";
-  const featuredSeries = await getSeriesDetail(featuredSeriesKey);
+  const { snapshot, featuredSeries } = await getHomePageData();
   const roadmap = getRoadmapPhases();
+  const tickerItems = snapshot.seriesSpotlight.slice(0, 6).map((item) => ({
+    label: `${item.oemName.toUpperCase()} ${item.modelName.toUpperCase()}`,
+    value: item.latestValue,
+    change:
+      item.previousYearValue > 0
+        ? ((item.latestValue - item.previousYearValue) / item.previousYearValue) * 100
+        : 0
+  }));
 
   return (
     <div className="page-stack">
+      <MarketTicker items={tickerItems} />
+
       <section className="hero-section">
         <div className="hero-copy">
-          <p className="eyebrow">Germany-first forecasting intelligence</p>
-          <h1>Vehicle registration history today, forecast-ready product experience tomorrow.</h1>
+          <p className="eyebrow">Decision Intelligence for Automotive Demand</p>
+          <h1>
+            Vehicle Registration Intelligence
+            <br />
+            for the Forecasting Era
+          </h1>
           <p className="hero-text">
-            This MVP connects to the current Supabase data model, visualizes historical KBA-backed
-            registrations, and prepares the product surface for 3, 6, and 12 month forecasts.
+            This platform connects to KBA-derived historical vehicle registrations and prepares the
+            surface for 3-, 6-, and 12-month AI forecasts.
           </p>
           <div className="hero-actions">
             <Link href="/explore" className="button-primary">
@@ -37,23 +51,35 @@ export default async function HomePage() {
           </div>
           <p className="status-chip">{snapshot.statusMessage}</p>
         </div>
-        <div className="hero-panel panel">
-          <div className="panel-header">
-            <div>
-              <p className="eyebrow">Landing preview</p>
-              <h3>Market registrations with forecast placeholders</h3>
+        <div className="hero-visual">
+          <div className="hero-chart-glow" />
+          <div className="hero-panel panel">
+            <div className="panel-header">
+              <div>
+                <p className="eyebrow">Market Lens</p>
+                <h3>Understand the automotive market today. Forecast it tomorrow.</h3>
+              </div>
+              <span className="badge">{new Date(snapshot.latestPeriod).getUTCFullYear()}</span>
             </div>
-            <span className="badge">{new Date(snapshot.latestPeriod).getUTCFullYear()}</span>
+            <TrendChart
+              actuals={snapshot.monthlyTotals}
+              forecast={featuredSeries?.forecast.slice(0, 12)}
+              label="Market activity with placeholder forecast preview"
+            />
           </div>
-          <TrendChart
-            actuals={snapshot.monthlyTotals}
-            forecast={featuredSeries?.forecast.slice(0, 12)}
-            label="Market activity with placeholder forecast preview"
-          />
         </div>
       </section>
 
       <HeroMetricGrid items={snapshot.heroMetrics} />
+
+      <section className="content-section">
+        <SectionHeading
+          kicker="Platform Capabilities"
+          title="Built like a market intelligence system, not a generic dashboard"
+          description="The homepage is structured to communicate monitoring, forecasting, and model-level exploration in the first scroll."
+        />
+        <CapabilitiesGrid />
+      </section>
 
       <section className="content-section">
         <SectionHeading

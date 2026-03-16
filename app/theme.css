@@ -1,34 +1,46 @@
 :root {
   color-scheme: dark;
-  --bg: #06111f;
-  --bg-soft: rgba(8, 20, 36, 0.92);
-  --surface: rgba(10, 24, 42, 0.8);
-  --surface-strong: rgba(13, 31, 54, 0.95);
-  --line: rgba(163, 194, 223, 0.12);
-  --text: #eef4fb;
-  --muted: rgba(222, 232, 244, 0.72);
-  --accent: #2ebcff;
-  --accent-deep: #2182f2;
-  --accent-warm: #ffab52;
-  --accent-soft: #9fd3ff;
-  --positive: #74d6ff;
-  --caution: #ffbd72;
-  --shadow: 0 30px 80px rgba(0, 0, 0, 0.32);
-  --background-top-left: rgba(46, 188, 255, 0.19);
-  --background-top-right: rgba(255, 171, 82, 0.12);
-  --background-shell-start: #04111f;
-  --background-shell-mid: #081827;
-  --background-shell-end: #02070d;
-  --status-border: rgba(159, 211, 255, 0.24);
-  --status-bg: rgba(46, 188, 255, 0.08);
-  --status-text: #d2e8ff;
-  --chart-line-actual: #25c7ff;
-  --chart-line-forecast: #ffab52;
-  --chart-line-third: #86b7ff;
-  --chart-fill-actual-strong: rgba(37, 199, 255, 0.5);
-  --chart-fill-actual-soft: rgba(37, 199, 255, 0.03);
-  --chart-band-95: rgba(255, 171, 82, 0.08);
-  --chart-band-80: rgba(255, 171, 82, 0.14);
-  --selection-chip-border: rgba(46, 188, 255, 0.24);
-  --selection-chip-bg: rgba(46, 188, 255, 0.08);
+  --bg: #050b18;
+  --bg-soft: rgba(5, 11, 24, 0.92);
+  --surface: rgba(13, 27, 42, 0.8);
+  --surface-strong: rgba(13, 27, 42, 0.96);
+  --line: rgba(138, 159, 179, 0.18);
+  --line-strong: rgba(138, 159, 179, 0.28);
+  --text: #e6edf3;
+  --muted: #8a9fb3;
+  --accent: #3a86ff;
+  --accent-deep: #1d66ff;
+  --accent-cyan: #00d4ff;
+  --accent-mint: #38f2b0;
+  --accent-warm: #ffb020;
+  --accent-soft: #7eb7ff;
+  --positive: #38f2b0;
+  --caution: #ffb020;
+  --shadow: 0 28px 90px rgba(0, 0, 0, 0.38);
+  --shadow-hover: 0 36px 110px rgba(0, 0, 0, 0.46);
+  --background-top-left: rgba(58, 134, 255, 0.19);
+  --background-top-right: rgba(0, 212, 255, 0.12);
+  --background-shell-start: #050b18;
+  --background-shell-mid: #08111f;
+  --background-shell-end: #030711;
+  --status-border: rgba(58, 134, 255, 0.28);
+  --status-bg: rgba(58, 134, 255, 0.08);
+  --status-text: #dce9ff;
+  --chart-line-actual: #00d4ff;
+  --chart-line-forecast: #ffb020;
+  --chart-line-third: #3a86ff;
+  --chart-fill-actual-strong: rgba(0, 212, 255, 0.36);
+  --chart-fill-actual-soft: rgba(0, 212, 255, 0.02);
+  --chart-band-95: rgba(58, 134, 255, 0.08);
+  --chart-band-80: rgba(58, 134, 255, 0.15);
+  --selection-chip-border: rgba(58, 134, 255, 0.24);
+  --selection-chip-bg: rgba(58, 134, 255, 0.08);
+  --button-shadow: 0 14px 28px rgba(58, 134, 255, 0.2);
+  --hero-glow:
+    radial-gradient(circle at 52% 44%, rgba(58, 134, 255, 0.32), rgba(0, 212, 255, 0.14) 32%, transparent 70%);
+  --hero-panel-glow:
+    0 0 0 1px rgba(58, 134, 255, 0.12),
+    0 26px 70px rgba(0, 0, 0, 0.42),
+    0 0 42px rgba(58, 134, 255, 0.14);
+  --metric-top-border: linear-gradient(90deg, #3a86ff 0%, #00d4ff 65%, #38f2b0 100%);
 }

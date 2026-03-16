@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { getPool, isDatabaseConfigured } from "@/lib/db";
 import { buildPlaceholderForecast } from "@/lib/forecast";
 import type {
@@ -37,11 +38,38 @@ type SeriesCatalogRow = {
   latest_value: string | number;
 };
 
+type SnapshotMonthlyRow = {
+  period_date: string;
+  value: string | number;
+};
+
+type SnapshotCountRow = {
+  min_period: string;
+  series_count: string | number;
+  oem_count: string | number;
+  drive_type_count: string | number;
+};
+
+type SnapshotRankedRow = {
+  label: string;
+  value: string | number;
+};
+
+type SnapshotSpotlightRow = {
+  series_id: string;
+  ts_key: string;
+  oem_name: string;
+  model_name: string | null;
+  drive_type: string;
+  latest_value: string | number;
+  previous_year_value: string | number;
+  latest_period: string;
+};
+
 const EXPLORE_RANGE_OPTIONS = [
   { value: "12", label: "Last 12 months" },
   { value: "24", label: "Last 24 months" },
-  { value: "36", label: "Last 36 months" },
-  { value: "all", label: "All history" }
+  { value: "36", label: "Last 36 months" }
 ] as const;
 
 function formatCompact(value: number) {
@@ -92,7 +120,7 @@ function normalizeCatalogRow(row: SeriesCatalogRow): ExploreSeriesOption {
 
 function applySeriesRange(points: TimePoint[], range: string) {
   if (range === "all") {
-    return points;
+    return points.slice(-36);
   }
 
   const months = Number(range);
@@ -496,6 +524,16 @@ function buildSnapshotFromSeries(allSeriesRows: QuerySeriesRow[]): MarketSnapsho
   };
 }
 
+function buildSeriesDetailFromRows(allSeriesRows: QuerySeriesRow[], tsKey: string): SeriesDetail | null {
+  const matchingRows = allSeriesRows.filter((row) => row.ts_key === tsKey);
+
+  if (matchingRows.length === 0) {
+    return null;
+  }
+
+  return transformSeries(matchingRows);
+}
+
 async function loadHistoricalRows() {
   if (!isDatabaseConfigured()) {
     throw new Error("Database credentials missing.");
@@ -526,17 +564,227 @@ async function loadHistoricalRows() {
   return result.rows;
 }
 
+async function loadLiveMarketSnapshot(): Promise<MarketSnapshot> {
+  if (!isDatabaseConfigured()) {
+    throw new Error("Database credentials missing.");
+  }
+
+  const pool = getPool();
+  const [monthlyResult, countResult, topOemsResult, driveTypeResult, spotlightResult] =
+    await Promise.all([
+      pool.query<SnapshotMonthlyRow>(
+        `
+          WITH latest_period AS (
+            SELECT MAX(fr.period_date) AS latest_period
+            FROM core.fact_registrations fr
+            JOIN core.dim_series ds ON ds.id = fr.series_id
+            WHERE ds.model_id IS NOT NULL
+          ),
+          cutoff AS (
+            SELECT
+              latest_period,
+              (latest_period - INTERVAL '23 months')::date AS min_period
+            FROM latest_period
+          )
+          SELECT
+            fr.period_date::text AS period_date,
+            SUM(fr.registrations_value)::float8 AS value
+          FROM core.fact_registrations fr
+          JOIN core.dim_series ds ON ds.id = fr.series_id
+          JOIN core.dim_drive_type dt ON dt.id = ds.drive_type_id
+          JOIN cutoff c ON fr.period_date BETWEEN c.min_period AND c.latest_period
+          WHERE ds.model_id IS NOT NULL
+            AND dt.display_name = 'Total'
+          GROUP BY fr.period_date
+          ORDER BY fr.period_date ASC
+        `
+      ),
+      pool.query<SnapshotCountRow>(
+        `
+          SELECT
+            MIN(fr.period_date)::text AS min_period,
+            COUNT(DISTINCT ds.ts_key)::int AS series_count,
+            COUNT(DISTINCT o.id)::int AS oem_count,
+            COUNT(DISTINCT dt.display_name)::int AS drive_type_count
+          FROM core.fact_registrations fr
+          JOIN core.dim_series ds ON ds.id = fr.series_id
+          JOIN core.dim_oem o ON o.id = ds.oem_id
+          JOIN core.dim_drive_type dt ON dt.id = ds.drive_type_id
+          WHERE ds.model_id IS NOT NULL
+        `
+      ),
+      pool.query<SnapshotRankedRow>(
+        `
+          WITH latest_period AS (
+            SELECT MAX(fr.period_date) AS latest_period
+            FROM core.fact_registrations fr
+            JOIN core.dim_series ds ON ds.id = fr.series_id
+            WHERE ds.model_id IS NOT NULL
+          )
+          SELECT
+            o.oem_name AS label,
+            SUM(fr.registrations_value)::float8 AS value
+          FROM core.fact_registrations fr
+          JOIN core.dim_series ds ON ds.id = fr.series_id
+          JOIN core.dim_oem o ON o.id = ds.oem_id
+          JOIN core.dim_drive_type dt ON dt.id = ds.drive_type_id
+          JOIN latest_period lp ON fr.period_date = lp.latest_period
+          WHERE ds.model_id IS NOT NULL
+            AND dt.display_name = 'Total'
+          GROUP BY o.oem_name
+          ORDER BY value DESC
+          LIMIT 6
+        `
+      ),
+      pool.query<SnapshotRankedRow>(
+        `
+          WITH latest_period AS (
+            SELECT MAX(fr.period_date) AS latest_period
+            FROM core.fact_registrations fr
+            JOIN core.dim_series ds ON ds.id = fr.series_id
+            WHERE ds.model_id IS NOT NULL
+          )
+          SELECT
+            dt.display_name AS label,
+            SUM(fr.registrations_value)::float8 AS value
+          FROM core.fact_registrations fr
+          JOIN core.dim_series ds ON ds.id = fr.series_id
+          JOIN core.dim_drive_type dt ON dt.id = ds.drive_type_id
+          JOIN latest_period lp ON fr.period_date = lp.latest_period
+          WHERE ds.model_id IS NOT NULL
+          GROUP BY dt.display_name
+          ORDER BY value DESC
+          LIMIT 6
+        `
+      ),
+      pool.query<SnapshotSpotlightRow>(
+        `
+          WITH latest_period AS (
+            SELECT MAX(fr.period_date) AS latest_period
+            FROM core.fact_registrations fr
+            JOIN core.dim_series ds ON ds.id = fr.series_id
+            WHERE ds.model_id IS NOT NULL
+          ),
+          previous_period AS (
+            SELECT
+              latest_period,
+              (latest_period - INTERVAL '12 months')::date AS previous_period
+            FROM latest_period
+          )
+          SELECT
+            ds.id::text AS series_id,
+            ds.ts_key,
+            o.oem_name,
+            m.model_name,
+            dt.display_name AS drive_type,
+            latest.registrations_value AS latest_value,
+            COALESCE(previous.registrations_value, 0) AS previous_year_value,
+            lp.latest_period::text AS latest_period
+          FROM latest_period lp
+          JOIN core.fact_registrations latest ON latest.period_date = lp.latest_period
+          JOIN core.dim_series ds ON ds.id = latest.series_id
+          JOIN core.dim_oem o ON o.id = ds.oem_id
+          LEFT JOIN core.dim_model m ON m.id = ds.model_id
+          JOIN core.dim_drive_type dt ON dt.id = ds.drive_type_id
+          LEFT JOIN previous_period pp ON true
+          LEFT JOIN core.fact_registrations previous
+            ON previous.series_id = latest.series_id
+           AND previous.period_date = pp.previous_period
+          WHERE ds.model_id IS NOT NULL
+            AND dt.display_name = 'Total'
+          ORDER BY latest.registrations_value DESC
+          LIMIT 8
+        `
+      )
+    ]);
+
+  const monthlyTotals: TimePoint[] = monthlyResult.rows.map((row) => ({
+    date: row.period_date,
+    value: parseNumber(row.value)
+  }));
+  const latestPeriod = monthlyTotals.at(-1)?.date ?? new Date().toISOString().slice(0, 10);
+  const latestValue = monthlyTotals.at(-1)?.value ?? 0;
+  const yearAgoValue = monthlyTotals.at(-13)?.value ?? latestValue;
+  const yoy = yearAgoValue > 0 ? (latestValue - yearAgoValue) / yearAgoValue : 0;
+  const counts = countResult.rows[0];
+
+  return {
+    status: "live",
+    statusMessage: "Historical registrations are loaded from Supabase. Forecast cards use placeholders for now.",
+    latestPeriod,
+    heroMetrics: [
+      {
+        label: "Latest market month",
+        value: formatCompact(latestValue),
+        change: `vs. PY ${formatPercent(yoy)}`,
+        tone: yoy >= 0 ? "positive" : "caution"
+      },
+      {
+        label: "Active model series",
+        value: formatNumber(parseNumber(counts?.series_count ?? 0)),
+        change: `${formatNumber(parseNumber(counts?.oem_count ?? 0))} OEMs tracked`,
+        tone: "neutral"
+      },
+      {
+        label: "History coverage",
+        value: `${formatMonth(counts?.min_period ?? latestPeriod)} to ${formatMonth(latestPeriod)}`,
+        change: `${formatNumber(parseNumber(counts?.drive_type_count ?? 0))} drive-type labels in source`,
+        tone: "neutral"
+      }
+    ],
+    monthlyTotals,
+    topOems: topOemsResult.rows.map((row) => ({
+      label: row.label,
+      value: parseNumber(row.value),
+      detail: `Latest month ${formatMonth(latestPeriod)}`
+    })),
+    driveTypeMix: driveTypeResult.rows.map((row) => ({
+      label: row.label,
+      value: parseNumber(row.value),
+      detail: "Source label from KBA-derived dataset"
+    })),
+    seriesSpotlight: spotlightResult.rows.map((row) => ({
+      seriesId: row.series_id,
+      tsKey: row.ts_key,
+      oemName: row.oem_name,
+      modelName: row.model_name ?? row.oem_name,
+      driveType: row.drive_type,
+      latestValue: parseNumber(row.latest_value),
+      previousYearValue: parseNumber(row.previous_year_value),
+      latestPeriod: row.latest_period
+    }))
+  };
+}
+
+const loadLiveMarketSnapshotCached = unstable_cache(loadLiveMarketSnapshot, ["market-snapshot"], {
+  revalidate: 300
+});
+
 export async function getMarketSnapshot(): Promise<MarketSnapshot> {
   try {
-    const rows = await loadHistoricalRows();
-
-    if (rows.length === 0) {
-      return buildFallbackSnapshot();
-    }
-
-    return buildSnapshotFromSeries(rows);
+    return await loadLiveMarketSnapshotCached();
   } catch {
     return buildFallbackSnapshot();
+  }
+}
+
+export async function getHomePageData(): Promise<{
+  snapshot: MarketSnapshot;
+  featuredSeries: SeriesDetail | null;
+}> {
+  const snapshot = await getMarketSnapshot();
+  const featuredSeriesKey = snapshot.seriesSpotlight[0]?.tsKey ?? "BMW_X1_Total";
+
+  try {
+    return {
+      snapshot,
+      featuredSeries: await getSeriesDetail(featuredSeriesKey)
+    };
+  } catch {
+    return {
+      snapshot,
+      featuredSeries: buildFallbackSeries(featuredSeriesKey)
+    };
   }
 }
 
@@ -588,12 +836,37 @@ export async function getExploreSeriesCatalog(): Promise<ExploreSeriesOption[]> 
     const pool = getPool();
     const result = await pool.query<SeriesCatalogRow>(
       `
-        WITH latest_fact AS (
+        WITH latest_period AS (
+          SELECT MAX(fr.period_date) AS latest_period
+          FROM core.fact_registrations fr
+          JOIN core.dim_series ds ON ds.id = fr.series_id
+          WHERE ds.model_id IS NOT NULL
+        ),
+        cutoff AS (
+          SELECT
+            latest_period,
+            (latest_period - INTERVAL '35 months')::date AS min_period
+          FROM latest_period
+        ),
+        top_oems AS (
+          SELECT ds.oem_id
+          FROM core.fact_registrations fr
+          JOIN core.dim_series ds ON ds.id = fr.series_id
+          JOIN core.dim_drive_type dt ON dt.id = ds.drive_type_id
+          JOIN latest_period lp ON fr.period_date = lp.latest_period
+          WHERE ds.model_id IS NOT NULL
+            AND dt.display_name = 'Total'
+          GROUP BY ds.oem_id
+          ORDER BY SUM(fr.registrations_value) DESC
+          LIMIT 5
+        ),
+        latest_fact AS (
           SELECT DISTINCT ON (fr.series_id)
             fr.series_id,
             fr.period_date,
             fr.registrations_value
           FROM core.fact_registrations fr
+          JOIN cutoff c ON fr.period_date BETWEEN c.min_period AND c.latest_period
           ORDER BY fr.series_id, fr.period_date DESC
         )
         SELECT
@@ -606,6 +879,7 @@ export async function getExploreSeriesCatalog(): Promise<ExploreSeriesOption[]> 
           lf.period_date::text AS latest_period,
           lf.registrations_value AS latest_value
         FROM core.dim_series ds
+        JOIN top_oems top ON top.oem_id = ds.oem_id
         JOIN core.dim_oem o ON o.id = ds.oem_id
         LEFT JOIN core.dim_model m ON m.id = ds.model_id
         JOIN core.dim_drive_type dt ON dt.id = ds.drive_type_id
@@ -681,6 +955,18 @@ async function loadExploreSeriesRows(selectedSeriesIds: string[]) {
   const pool = getPool();
   const result = await pool.query<QuerySeriesRow>(
     `
+      WITH latest_period AS (
+        SELECT MAX(fr.period_date) AS latest_period
+        FROM core.fact_registrations fr
+        JOIN core.dim_series ds ON ds.id = fr.series_id
+        WHERE ds.model_id IS NOT NULL
+      ),
+      cutoff AS (
+        SELECT
+          latest_period,
+          (latest_period - INTERVAL '35 months')::date AS min_period
+        FROM latest_period
+      )
       SELECT
         ds.id::text AS series_id,
         ds.ts_key,
@@ -695,6 +981,7 @@ async function loadExploreSeriesRows(selectedSeriesIds: string[]) {
       JOIN core.dim_oem o ON o.id = ds.oem_id
       LEFT JOIN core.dim_model m ON m.id = ds.model_id
       JOIN core.dim_drive_type dt ON dt.id = ds.drive_type_id
+      JOIN cutoff c ON fr.period_date BETWEEN c.min_period AND c.latest_period
       WHERE ds.id = ANY($1::uuid[])
       ORDER BY fr.period_date ASC
     `,
